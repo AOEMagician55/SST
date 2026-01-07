@@ -1,43 +1,70 @@
-# Set up and run this Streamlit App
 import streamlit as st
 import pandas as pd
-from helper_functions.utility import check_password
+from openai import OpenAI
 
-# from helper_functions import llm
-from logics.customer_query_handler import process_user_message
+# ---------------- Streamlit App Configuration ----------------
+st.set_page_config(layout="centered", page_title="AI Career Suggestion App")
+st.title("💼 AI-Powered Career Suggestion App")
+st.subheader("Describe your skills, interests, and passions, and get suggested careers with how to get there!")
 
+# ---------------- OpenAI Client ----------------
+# Make sure your OpenAI API key is in secrets.toml: OPENAI_API_KEY
+api_key = st.secrets.get("OPENAI_API_KEY")
 
-# region <--------- Streamlit App Configuration --------->
-st.set_page_config(
-    layout="centered",
-    page_title="My Streamlit App"
-)
-
-# Do not continue if check_password is not True.
-if not check_password():
+if not api_key:
+    st.error("OpenAI API key not found. Please add it to your secrets.toml or Streamlit Cloud secrets.")
     st.stop()
 
-# endregion <--------- Streamlit App Configuration --------->
+client = OpenAI(api_key=api_key)
 
-st.title("Streamlit App")
+# ---------------- Streamlit Form ----------------
+with st.form(key="career_form"):
+    user_prompt = st.text_area(
+        "Describe your skills, interests, or what you enjoy doing",
+        height=200
+    )
+    submitted = st.form_submit_button("Get Career Suggestions")
 
-form = st.form(key="form")
-form.subheader("Prompt")
+# ---------------- Generate Career Suggestions ----------------
+if submitted:
+    st.info("Analyzing your input with AI...")
 
-user_prompt = form.text_area("Enter your prompt here", height=200)
+    # Build the prompt for GPT
+    ai_prompt = f"""
+You are a career advisor AI. 
 
-if form.form_submit_button("Submit"):
+User description: {user_prompt}
 
-    st.toast(f"User Input Submitted - {user_prompt}")
+Task:
+1. Suggest 3-5 careers that match the user's skills and interests.
+2. For each career, provide a clear roadmap of how to get there in bullet points.
+3. Respond in JSON format as a list of objects with fields "Career" and "How_to_get_there".
+"""
 
-    st.divider()
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful career advisor."},
+                {"role": "user", "content": ai_prompt}
+            ]
+        )
 
-    response, course_details = process_user_message(user_prompt)
-    st.write(response)
-    print(response)
+        # Extract text
+        text_response = response.choices[0].message.content
 
-    st.divider()
+        # Try to parse JSON from AI output
+        import json
+        try:
+            career_list = json.loads(text_response)
+            df = pd.DataFrame(career_list)
+        except:
+            # Fallback if AI output is not valid JSON
+            st.warning("Could not parse AI response as JSON. Showing raw response:")
+            st.text(text_response)
+        else:
+            st.success("Here are your AI-generated career suggestions!")
+            st.table(df)
 
-    print(course_details)
-    df = pd.DataFrame(course_details)
-    df
+    except Exception as e:
+        st.error(f"Error generating career suggestions: {e}")
