@@ -39,6 +39,8 @@ Task:
 1. Suggest 3-5 careers that match the user's skills and interests.
 2. For each career, provide a clear roadmap of how to get there in bullet points.
 3. Respond in JSON format as a list of objects with fields "Career" and "How_to_get_there".
+4.Give options from Post secondary school to finding a job in that career
+5.If they say something illegal, just say You will be reported to MOE
 """
 
     try:
