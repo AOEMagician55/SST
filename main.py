@@ -147,29 +147,22 @@ if st.session_state.get("game_started"):
     if not s.game_over:
         col1, col2, col3, col4 = st.columns(4)
 
-        # ATTACK
+               # ATTACK
         with col1:
             if st.button("Attack"):
                 if s.player_energy < 20:
                     st.warning("Not enough energy!")
                 else:
+                    s.player_energy = max(0, s.player_energy - 20)  # energy deducted immediately
                     base = random.randint(*hero["dmg"])
                     dmg = base * (1 + s.player_combo * 0.10)
                     dmg *= (1 + s.player_attack_buff)
-
-                    dmg = max(
-                        0,
-                        int(dmg - (s.enemy_defense + s.temp_enemy_defense))
-                    )
+                    dmg = max(0, int(dmg - (s.enemy_defense + s.temp_enemy_defense)))
 
                     s.temp_enemy_defense = 0
                     s.enemy_hp -= dmg
-                    s.player_energy = max(0, s.player_energy - 20)
                     s.player_combo += 1
-                    s.player_attack_buff = min(
-                        s.player_attack_buff + 0.05, MAX_ATTACK_BUFF
-                    )
-
+                    s.player_attack_buff = min(s.player_attack_buff + 0.05, MAX_ATTACK_BUFF)
                     s.turn_log.append(f"You attack for {dmg} damage!")
                     enemy_turn()
 
@@ -179,7 +172,7 @@ if st.session_state.get("game_started"):
                 if s.player_energy < 10:
                     st.warning("Not enough energy!")
                 else:
-                    s.player_energy = max(0, s.player_energy - 10)
+                    s.player_energy = max(0, s.player_energy - 10)  # energy deducted immediately
                     s.player_combo = 0
                     s.temp_defense = 20
                     s.turn_log.append("You defend (+20 defense for 1 turn)")
@@ -188,10 +181,11 @@ if st.session_state.get("game_started"):
         # REST
         with col3:
             if st.button("Rest"):
-                s.player_energy = min(MAX_ENERGY, s.player_energy + 30)
+                s.player_energy = min(MAX_ENERGY, s.player_energy + 30)  # Rest always restores energy
                 s.player_combo = 0
                 s.turn_log.append("You rest.")
                 enemy_turn()
+
 
         # ABILITY
         with col4:
