@@ -14,7 +14,6 @@ HEROES = {
         "ability": "Brainrot Infection",
         "ability_description": "Deals 20 damage over three turns. Does not stack with combos. 30 energy cost.",
         "Character description":"The person who created the 67 virus.",
-        "image": "images/heroes/67_kid.png"  # <-- replace with your own image
     },
     "Pink": {
         "hp": 600,
@@ -22,7 +21,6 @@ HEROES = {
         "ability": "Comfortably Numb",
         "ability_description": "Increase defense for the rest of the fight by 20 (stacking). 25 energy cost.",
         "Character description":"Ultra-powerful numbing pills are given to every employee for efficiency.",
-        "image": "images/heroes/pink.png"
     },
     "Crying man": {
         "hp": 400,
@@ -30,7 +28,6 @@ HEROES = {
         "ability": "National Fervor",
         "ability_description": "Increase attack by 10% for the rest of battle, 5% chance to crit. 25 energy cost.",
         "Character description":"Very patriotic, will defend his country, even cries at national anthems.",
-        "image": "images/heroes/crying_man.png"
     },
      "Jar jar bing": {
         "hp": 1000,
@@ -38,7 +35,6 @@ HEROES = {
         "ability": "BigHard",
         "ability_description": "5% chance to crit and deal 1000 damage. 20 energy cost.",
         "Character description":"Jar Jar Bink's brother joins the battle.",
-        "image": "images/heroes/jar_jar_bing.png"
     }
 }
 
