@@ -14,7 +14,7 @@ HEROES = {
         "hp": 620,
         "dmg": (12, 22),
         "ability": "Brainrot Infection",
-        "ability_description": "Deals 15 damage over 3 turns. Does not stack. 30 energy.",
+        "ability_description": "Deals 15 damage over 3 turns. Refreshable. 30 energy.",
     },
     "Pink": {
         "hp": 650,
@@ -78,6 +78,10 @@ if st.session_state.get("game_started"):
     hero = HEROES[s.hero_name]
     enemy_data = ENEMIES[s.enemy_name]
 
+    # Helper function to deduct energy properly
+    def spend_energy(amount):
+        s.player_energy = max(0, s.player_energy - amount)
+
     # Brainrot DOT
     if s.brainrot_active and s.brainrot_turns > 0:
         dmg = max(0, 15 - s.enemy_defense)
@@ -89,7 +93,6 @@ if st.session_state.get("game_started"):
 
     # -------- UI --------
     col1, col2 = st.columns(2)
-
     with col1:
         st.subheader(s.hero_name)
         st.write(f"HP: {s.player_hp}")
@@ -97,7 +100,6 @@ if st.session_state.get("game_started"):
         st.write(f"Defense: {s.player_defense}")
         st.write(f"Temp Defense: {s.temp_defense}")
         st.write(f"Attack Buff: {s.player_attack_buff*100:.0f}%")
-
     with col2:
         st.subheader(s.enemy_name)
         st.write(f"HP: {s.enemy_hp}")
@@ -117,27 +119,20 @@ if st.session_state.get("game_started"):
         if action == "attack":
             base = random.randint(*enemy_data["dmg"])
             dmg = int(base * (1 + s.enemy_combo * 0.10))
-
-            effective_defense = min(
-                s.player_defense + s.temp_defense, MAX_DEFENSE_CAP
-            )
+            effective_defense = min(s.player_defense + s.temp_defense, MAX_DEFENSE_CAP)
             dmg = max(0, dmg - effective_defense)
-
             if player_defended:
                 dmg //= 2
-
             s.player_hp -= dmg
             s.enemy_energy = max(0, s.enemy_energy - 20)
             s.enemy_combo += 1
             s.temp_defense = 0
             s.turn_log.append(f"{s.enemy_name} attacks for {dmg} damage!")
-
         elif action == "defend":
             s.enemy_energy = max(0, s.enemy_energy - 10)
             s.enemy_combo = 0
             s.temp_enemy_defense = 10
             s.turn_log.append(f"{s.enemy_name} defends (+10 defense for 1 turn)")
-
         else:
             s.enemy_energy = min(MAX_ENERGY, s.enemy_energy + 30)
             s.enemy_combo = 0
@@ -147,18 +142,17 @@ if st.session_state.get("game_started"):
     if not s.game_over:
         col1, col2, col3, col4 = st.columns(4)
 
-               # ATTACK
+        # ATTACK
         with col1:
             if st.button("Attack"):
                 if s.player_energy < 20:
                     st.warning("Not enough energy!")
                 else:
-                    s.player_energy = max(0, s.player_energy - 20)  # energy deducted immediately
+                    spend_energy(20)
                     base = random.randint(*hero["dmg"])
                     dmg = base * (1 + s.player_combo * 0.10)
                     dmg *= (1 + s.player_attack_buff)
                     dmg = max(0, int(dmg - (s.enemy_defense + s.temp_enemy_defense)))
-
                     s.temp_enemy_defense = 0
                     s.enemy_hp -= dmg
                     s.player_combo += 1
@@ -172,48 +166,45 @@ if st.session_state.get("game_started"):
                 if s.player_energy < 10:
                     st.warning("Not enough energy!")
                 else:
-                    s.player_energy = max(0, s.player_energy - 10)  # energy deducted immediately
+                    spend_energy(10)
                     s.player_combo = 0
-                    s.temp_defense = 20
+                    s.temp_defense = 20  # unstackable for all except Pink ability
                     s.turn_log.append("You defend (+20 defense for 1 turn)")
                     enemy_turn(player_defended=True)
 
         # REST
         with col3:
             if st.button("Rest"):
-                s.player_energy = min(MAX_ENERGY, s.player_energy + 30)  # Rest always restores energy
+                s.player_energy = min(MAX_ENERGY, s.player_energy + 30)
                 s.player_combo = 0
                 s.turn_log.append("You rest.")
                 enemy_turn()
 
-
         # ABILITY
         with col4:
             if st.button(hero["ability"]):
-
+                # Pink Ability
                 if hero["ability"] == "Comfortably Numb" and s.player_energy >= 25:
-                    s.player_energy = max(0, s.player_energy - 25)
+                    spend_energy(25)
                     s.player_defense = min(s.player_defense + 15, 60)
                     s.turn_log.append("Pink hardens defenses!")
                     enemy_turn()
-
+                # 67 Kid Ability
                 elif hero["ability"] == "Brainrot Infection" and s.player_energy >= 30:
-                  s.player_energy = max(0, s.player_energy - 30)
-                  s.brainrot_active = True
-                  s.brainrot_turns = 3  # RESET duration even if already active
-                  s.turn_log.append("Brainrot applied/refreshed!")
-                  enemy_turn()
-
+                    spend_energy(30)
+                    s.brainrot_active = True
+                    s.brainrot_turns = 3  # refresh if already active
+                    s.turn_log.append("Brainrot applied/refreshed!")
+                    enemy_turn()
+                # Crying Man Ability
                 elif hero["ability"] == "National Fervor" and s.player_energy >= 30:
-                    s.player_energy = max(0, s.player_energy - 30)
-                    s.player_attack_buff = min(
-                        s.player_attack_buff + 0.08, MAX_ATTACK_BUFF
-                    )
+                    spend_energy(30)
+                    s.player_attack_buff = min(s.player_attack_buff + 0.08, MAX_ATTACK_BUFF)
                     s.turn_log.append("Crying Man rallies!")
                     enemy_turn()
-
+                # Jar Jar Ability
                 elif hero["ability"] == "BigHard" and s.player_energy >= 20:
-                    s.player_energy = max(0, s.player_energy - 20)
+                    spend_energy(20)
                     if random.random() <= 0.05:
                         s.enemy_hp -= 1000
                         s.turn_log.append("💥 BIGHARD CRITICAL!")
@@ -221,7 +212,7 @@ if st.session_state.get("game_started"):
                         s.turn_log.append("BigHard missed.")
                     enemy_turn()
 
-    # ---------------- End ----------------
+    # ---------------- End Conditions ----------------
     if s.player_hp <= 0:
         s.game_over = True
         st.error("You lost!")
@@ -234,9 +225,11 @@ if st.session_state.get("game_started"):
     for log in reversed(s.turn_log[-8:]):
         st.write(log)
 
+    # ---------------- Restart ----------------
     if s.game_over and st.button("Restart"):
         st.session_state.clear()
         st.rerun()
+
 
 
 
