@@ -39,7 +39,7 @@ HEROES = {
 ENEMIES = {
     "Goblin": {"hp": 120, "dmg": (10, 18)},
     "Orc": {"hp": 320, "dmg": (15, 25)},
-    "Dragon": {"hp": 1100, "dmg": (15, 50)},
+    "Dragon": {"hp": 1000, "dmg": (15, 50)},
 }
 
 # ---------------- CHARACTER SELECTION ----------------
