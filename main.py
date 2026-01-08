@@ -101,7 +101,6 @@ if st.session_state.get("game_started"):
 
     with col1:
         st.subheader(f"🧍 {s.hero_name}")
-        st.image(hero["image"], width=150)
         st.write(f"❤️ HP: {s.player_hp}")
         st.write(f"🔋 Energy: {s.player_energy}")
         st.write(f"🔥 Combo: {s.player_combo}")
@@ -110,7 +109,6 @@ if st.session_state.get("game_started"):
 
     with col2:
         st.subheader(f"👹 {s.enemy_name}")
-        st.image(enemy_data.get("image", None), width=150)
         st.write(f"❤️ HP: {s.enemy_hp}")
         st.write(f"🔋 Energy: {s.enemy_energy}")
         st.write(f"🔥 Combo: {s.enemy_combo}")
