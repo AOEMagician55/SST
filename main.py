@@ -77,7 +77,8 @@ if "game_started" not in st.session_state:
             "game_over": False,
             "game_started": True,
         })
-        st.experimental_rerun()
+        st.rerun()
+
 
 # ---------------- GAME ----------------
 if st.session_state.get("game_started"):
@@ -265,7 +266,7 @@ if st.session_state.get("game_started"):
     if s.game_over:
         if st.button("🔄 Back to Select"):
             st.session_state.clear()
-            st.experimental_rerun()
+            st.rerun()
 
 
 
