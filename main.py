@@ -198,11 +198,11 @@ if st.session_state.get("game_started"):
                     enemy_turn()
 
                 elif hero["ability"] == "Brainrot Infection" and s.player_energy >= 30:
-                    s.player_energy = max(0, s.player_energy - 30)
-                    s.brainrot_active = True
-                    s.brainrot_turns = 3
-                    s.turn_log.append("Brainrot applied!")
-                    enemy_turn()
+                  s.player_energy = max(0, s.player_energy - 30)
+                  s.brainrot_active = True
+                  s.brainrot_turns = 3  # RESET duration even if already active
+                  s.turn_log.append("Brainrot applied/refreshed!")
+                  enemy_turn()
 
                 elif hero["ability"] == "National Fervor" and s.player_energy >= 30:
                     s.player_energy = max(0, s.player_energy - 30)
