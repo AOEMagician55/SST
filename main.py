@@ -5,43 +5,45 @@ st.set_page_config(page_title="Turn-Based Fighting Game", layout="centered")
 st.title("⚔️ Turn-Based Fighting Game")
 
 MAX_ENERGY = 100
+MAX_ATTACK_BUFF = 0.50
+MAX_DEFENSE_CAP = 80
 
 # ---------------- HERO & ENEMY DATA ----------------
 HEROES = {
     "67 Kid": {
-        "hp": 670,
-        "dmg": (10, 25),
+        "hp": 620,
+        "dmg": (12, 22),
         "ability": "Brainrot Infection",
-        "ability_description": "Deals 20 damage over three turns. Does not stack with combos. 30 energy cost.",
-        "Character description":"The person who created the 67 virus.",
+        "ability_description": "Deals 15 damage over 3 turns. Does not stack. 30 energy.",
+        "Character description": "The person who created the 67 virus.",
     },
     "Pink": {
-        "hp": 600,
-        "dmg": (15, 20),
+        "hp": 650,
+        "dmg": (12, 18),
         "ability": "Comfortably Numb",
-        "ability_description": "Increase defense for the rest of the fight by 20 (stacking). 25 energy cost.",
-        "Character description":"Ultra-powerful numbing pills are given to every employee for efficiency.",
+        "ability_description": "Increase defense by 15 (stacking up to 60). 25 energy.",
+        "Character description": "Ultra-powerful numbing pills are given to every employee for efficiency.",
     },
     "Crying man": {
-        "hp": 400,
-        "dmg": (25, 35),
+        "hp": 450,
+        "dmg": (22, 32),
         "ability": "National Fervor",
-        "ability_description": "Increase attack by 10% for the rest of battle, 5% chance to crit. 25 energy cost.",
-        "Character description":"Very patriotic, will defend his country, even cries at national anthems.",
+        "ability_description": "Increase attack by 8% for rest of battle. 5% crit. 30 energy.",
+        "Character description": "Very patriotic, will defend his country, even cries at national anthems.",
     },
-     "Jar jar bing": {
+    "Jar jar bing": {  # UNCHANGED (INTENTIONALLY BROKEN)
         "hp": 1000,
-        "dmg": (10, 15),
+        "dmg": (7, 10),
         "ability": "BigHard",
-        "ability_description": "5% chance to crit and deal 1000 damage. 20 energy cost.",
-        "Character description":"Jar Jar Bink's brother joins the battle.",
+        "ability_description": "5% chance to deal 1000 damage. 20 energy.",
+        "Character description": "We can't afford the star wars ip, so we got jar jar's brother to help us out.",
     }
 }
 
 ENEMIES = {
-    "Goblin": {"hp": 100, "dmg": (10, 18),  },
-    "Orc": {"hp": 300, "dmg": (15, 25),  },
-    "Dragon": {"hp": 1000, "dmg": (10, 50), },
+    "Goblin": {"hp": 120, "dmg": (10, 18)},
+    "Orc": {"hp": 320, "dmg": (15, 25)},
+    "Dragon": {"hp": 1100, "dmg": (15, 50)},
 }
 
 # ---------------- CHARACTER SELECTION ----------------
@@ -73,12 +75,12 @@ if "game_started" not in st.session_state:
             "player_attack_buff": 0.0,
             "brainrot_active": False,
             "brainrot_turns": 0,
+            "temp_defense": 0,
             "turn_log": [],
             "game_over": False,
             "game_started": True,
         })
         st.rerun()
-
 
 # ---------------- GAME ----------------
 if st.session_state.get("game_started"):
@@ -86,13 +88,14 @@ if st.session_state.get("game_started"):
     enemy_data = ENEMIES[st.session_state.enemy_name]
     s = st.session_state
 
-    # Apply Brainrot Infection if active
+    # Apply Brainrot Infection
     if s.brainrot_active and s.brainrot_turns > 0:
-        dmg = 20
-        dmg = max(0, dmg - s.enemy_defense)
+        dmg = max(0, 15 - s.enemy_defense)
         s.enemy_hp -= dmg
         s.brainrot_turns -= 1
-        s.turn_log.append(f"Brainrot Infection deals {dmg} damage. ({s.brainrot_turns} turns left)")
+        s.turn_log.append(
+            f"Brainrot Infection deals {dmg} damage. ({s.brainrot_turns} turns left)"
+        )
         if s.brainrot_turns == 0:
             s.brainrot_active = False
 
@@ -105,6 +108,7 @@ if st.session_state.get("game_started"):
         st.write(f"🔋 Energy: {s.player_energy}")
         st.write(f"🔥 Combo: {s.player_combo}")
         st.write(f"🛡️ Defense: {s.player_defense}")
+        st.write(f"🛡️ Temp Defense: {s.temp_defense}")
         st.write(f"⚔️ Attack Buff: {s.player_attack_buff*100:.0f}%")
 
     with col2:
@@ -123,21 +127,28 @@ if st.session_state.get("game_started"):
             s.enemy_stunned = False
             return
 
-        if s.enemy_energy < 20:
-            action = "rest"
-        else:
-            action = random.choice(["attack", "attack", "defend", "rest"])
+        action = "rest" if s.enemy_energy < 20 else random.choice(
+            ["attack", "attack", "defend", "rest"]
+        )
 
         if action == "attack":
             base = random.randint(*enemy_data["dmg"])
             dmg = int(base * (1 + s.enemy_combo * 0.10))
-            dmg = max(0, dmg - s.player_defense)
+
+            effective_defense = min(
+                s.player_defense + s.temp_defense, MAX_DEFENSE_CAP
+            )
+            dmg = max(0, dmg - effective_defense)
+
             if player_defended:
                 dmg //= 2
+
             s.enemy_energy -= 20
             s.player_hp -= dmg
             s.enemy_combo += 1
             s.turn_log.append(f"{s.enemy_name} attacks for {dmg} damage!")
+
+            s.temp_defense = 0  # expires after 1 turn
 
         elif action == "defend":
             s.enemy_energy -= 10
@@ -163,23 +174,31 @@ if st.session_state.get("game_started"):
                     base = random.randint(*hero["dmg"])
                     dmg = base * (1 + s.player_combo * 0.10)
                     dmg *= (1 + s.player_attack_buff)
+
                     if random.random() <= 0.05:
                         dmg *= 2
                         s.turn_log.append("💥 CRITICAL HIT!")
+
                     dmg = max(0, int(dmg - s.enemy_defense))
+
                     if s.player_rest_penalty:
                         dmg = int(dmg * 0.75)
                         s.turn_log.append("⚠️ Rest penalty applied!")
                         s.player_rest_penalty = False
+
                     s.player_energy -= 20
                     s.enemy_hp -= dmg
                     s.player_combo += 1
                     s.player_rest_streak = 0
-                    s.player_attack_buff += 0.05
-                    s.turn_log.append(f"You attack for {dmg} damage! (Attack Buff: {s.player_attack_buff*100:.0f}%)")
+
+                    s.player_attack_buff = min(
+                        s.player_attack_buff + 0.05, MAX_ATTACK_BUFF
+                    )
+
+                    s.turn_log.append(f"You attack for {dmg} damage!")
                     enemy_turn()
 
-        # DEFEND
+        # DEFEND (NERFED)
         with col2:
             if st.button("🛡️ Defend"):
                 if s.player_energy < 10:
@@ -188,8 +207,8 @@ if st.session_state.get("game_started"):
                     s.player_energy -= 10
                     s.player_combo = 0
                     s.player_rest_streak = 0
-                    s.player_defense += 5
-                    s.turn_log.append(f"You defend. (+5 defense, total: {s.player_defense})")
+                    s.temp_defense = 20
+                    s.turn_log.append("You defend. (+20 defense for 1 turn)")
                     enemy_turn(player_defended=True)
 
         # REST
@@ -206,44 +225,40 @@ if st.session_state.get("game_started"):
         # HERO ABILITY
         with col4:
             if st.button(f"✨ {hero['ability']}"):
-                if hero["ability"] == "Brainrot Infection":
-                    if s.player_energy < 30:
-                        st.warning("Not enough energy!")
+
+                if hero["ability"] == "Brainrot Infection" and s.player_energy >= 30:
+                    s.player_energy -= 30
+                    s.brainrot_active = True
+                    s.brainrot_turns = 3
+                    s.turn_log.append("67 Kid used Brainrot Infection!")
+                    enemy_turn()
+
+                elif hero["ability"] == "Comfortably Numb" and s.player_energy >= 25:
+                    s.player_energy -= 25
+                    s.player_defense = min(s.player_defense + 15, 60)
+                    s.turn_log.append(
+                        f"Pink used Comfortably Numb! Defense: {s.player_defense}"
+                    )
+                    enemy_turn()
+
+                elif hero["ability"] == "National Fervor" and s.player_energy >= 30:
+                    s.player_energy -= 30
+                    s.player_attack_buff = min(
+                        s.player_attack_buff + 0.08, MAX_ATTACK_BUFF
+                    )
+                    s.turn_log.append(
+                        f"Crying Man used National Fervor! Attack buff: {s.player_attack_buff*100:.0f}%"
+                    )
+                    enemy_turn()
+
+                elif hero["ability"] == "BigHard" and s.player_energy >= 20:
+                    s.player_energy -= 20
+                    if random.random() <= 0.05:
+                        s.enemy_hp -= 1000
+                        s.turn_log.append("💥 BigHard CRITICAL! 1000 damage!")
                     else:
-                        s.player_energy -= 30
-                        s.brainrot_active = True
-                        s.brainrot_turns = 3
-                        s.turn_log.append("67 Kid used Brainrot Infection! Damage over 3 turns activated.")
-                        enemy_turn()
-                elif hero["ability"] == "Comfortably Numb":
-                    if s.player_energy < 25:
-                        st.warning("Not enough energy!")
-                    else:
-                        s.player_energy -= 25
-                        s.player_defense += 20
-                        s.turn_log.append(f"Pink used Comfortably Numb! Defense increased by 20 (Total: {s.player_defense}).")
-                        enemy_turn()
-                elif hero["ability"] == "National Fervor":
-                    if s.player_energy < 35:
-                        st.warning("Not enough energy!")
-                    else:
-                        s.player_energy -= 35
-                        s.player_attack_buff += 0.10
-                        if random.random() <= 0.05:
-                            s.turn_log.append("💥 CRITICAL HIT ACTIVATED!")
-                        s.turn_log.append(f"Crying man used National Fervor! Attack increased by 10% (Total Attack Buff: {s.player_attack_buff*100:.0f}%)")
-                        enemy_turn()
-                elif hero["ability"] == "BigHard":
-                    if s.player_energy < 20:
-                        st.warning("Not enough energy!")
-                    else:
-                        s.player_energy -= 20
-                        if random.random() <= 0.05:
-                            s.enemy_hp -= 1000
-                            s.turn_log.append("💥 Jar Jar Bing used BigHard! CRITICAL HIT! 1000 damage dealt!")
-                        else:
-                            s.turn_log.append("Jar Jar Bing used BigHard! But no critical hit.")
-                        enemy_turn()
+                        s.turn_log.append("BigHard failed to crit.")
+                    enemy_turn()
 
     # ---------------- End Conditions ----------------
     if s.player_hp <= 0:
@@ -261,10 +276,10 @@ if st.session_state.get("game_started"):
         st.write(log)
 
     # ---------------- Restart ----------------
-    if s.game_over:
-        if st.button("🔄 Back to Select"):
-            st.session_state.clear()
-            st.rerun()
+    if s.game_over and st.button("🔄 Back to Select"):
+        st.session_state.clear()
+        st.rerun()
+
 
 
 
